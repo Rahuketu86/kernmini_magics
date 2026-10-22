@@ -125,14 +125,17 @@ class Workspace:
     `call_returns` decides what `ws(code)` and the line magic return: `'result'` (the
     implicit result's text, output printed as usual) or `'output'` (the printed output
     itself, as a string, not echoed) -- for languages like Prolog whose answers are
-    output, not values. The cell magic always prints."""
+    output, not values. The cell magic always prints.
+
+    `aliases` registers the same magic under more names, sharing this one engine and state
+    (`%%js` and `%%ts` both drive one QuickJS context)."""
     _echo = True
 
     def __init__(self, name, shell_factory, *, error_cls=MagicError, register=None,
-                 quiet_marker=';', strip_marker=False, timeout=None, call_returns='result'):
+                 quiet_marker=';', strip_marker=False, timeout=None, call_returns='result', aliases=()):
         if call_returns not in ('result', 'output'): raise ValueError(f"call_returns must be 'result' or 'output', not {call_returns!r}")
         self.name, self.error_cls, self.quiet_marker, self.strip_marker = name, error_cls, quiet_marker, strip_marker
-        self.call_returns = call_returns
+        self.call_returns, self.aliases = call_returns, tuple(aliases)
         self.timeout = timeout if timeout is not None else _env_timeout(name)
         self._factory, self._register = shell_factory, register
         self._runner = self._shell = self._fut = None
@@ -303,9 +306,9 @@ class Workspace:
         return (res.get('data') or {}).get('text/plain') if res and res.get('found') else None
 
     # -- IPython integration -----------------------------------------------------------
-    def _matcher(self):
+    def _matcher(self, name=None):
         from IPython.core.completer import context_matcher, SimpleCompletion
-        name = self.name
+        name = name or self.name
         cell_re = re.compile(rf'%%{re.escape(name)}[^\S\n]*\n')
         line_re = re.compile(rf'\s*(?:\w+\s*=\s*)?%{re.escape(name)}\s+')
 
@@ -328,14 +331,15 @@ class Workspace:
         return complete
 
     def load(self, ip=None):
-        "Register `%name`/`%%name` and the completion matcher with `ip` (default: the running IPython)."
+        "Register `%name`/`%%name` (and any aliases) and their completion matchers with `ip` (default: the running IPython)."
         ip = ip or _ipython()
         if ip is None: raise RuntimeError('not running inside IPython')
-        ip.register_magic_function(self._magic, 'line_cell', self.name)
-        ident = f'kernmini_magics.{self.name}'
         matchers = ip.Completer.custom_matchers
-        matchers[:] = [m for m in matchers if getattr(m, 'matcher_identifier', None) != ident]
-        matchers.append(self._matcher())
+        for name in (self.name, *self.aliases):
+            ip.register_magic_function(self._magic, 'line_cell', name)
+            ident = f'kernmini_magics.{name}'
+            matchers[:] = [m for m in matchers if getattr(m, 'matcher_identifier', None) != ident]
+            matchers.append(self._matcher(name))
         if not self._atexit: atexit.register(self.close); self._atexit = True
         return self
 
