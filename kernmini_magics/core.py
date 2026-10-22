@@ -326,7 +326,13 @@ class Workspace:
             res = self._service('complete', code, cpos)
             if not res or not res.get('matches'): return empty
             frag = code[res.get('cursor_start', cpos):cpos]
-            return dict(completions=[SimpleCompletion(m, type=f'{name} name') for m in res['matches']],
+            # Jupyter frontends filter replies client-side and some shells rely on that (libclang
+            # returns every keyword); IPython shows what it gets, so filter here: names starting
+            # with the fragment, else names containing it (Prolog's substring matches), never others.
+            matches = list(res['matches'])
+            if frag: matches = [m for m in matches if m.startswith(frag)] or [m for m in matches if frag in m]
+            if not matches: return empty
+            return dict(completions=[SimpleCompletion(m, type=f'{name} name') for m in matches],
                         matched_fragment=frag, suppress=True)
         return complete
 
