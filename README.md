@@ -59,6 +59,7 @@ A [kernmini](https://github.com/AnswerDotAI/kernmini) shell – the object with 
 | `quickjs-kernmini` | `%%js`, `%%ts` (one shared context) | `js` (= `ts`) | trailing `;;` | yes, sync or async |
 | `micropython-wasi-kernmini` | `%%mpy` / `%mpy` | `mpy` | trailing `;` | yes |
 | `clang-repl-kernmini` | `%%c` / `%c` | `c` | none (C’s own rule) | no |
+| `web_kernel` | `%%tab` / `%tab` | `tab` | trailing `;;` | yes, sync or async; page code calls it as `await fn(...)` |
 
 Each is loaded explicitly, e.g. `%load_ext prolog_wasm_kernmini.magics`, and installed with that package’s `magics` extra. Each repo’s `nbs/11_demo_python_magic.ipynb` is a Python dialog using its magic.
 
