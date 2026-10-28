@@ -31,3 +31,7 @@ version = {attr = "kernmini_magics.__version__"}
 include = ["kernmini_magics"]
 
 [tool.nbdev]
+# Metadata dialogs depend on, exempt from nbdev_clean (a dialog's settings, prompts' solveit_ai, replies' is_ai_res).
+allowed_metadata_keys = ["language", "kernel_type", "actor_type", "solveit"]
+allowed_cell_metadata_keys = ["solveit_ai", "skipped", "pinned", "bookmark", "heading_collapsed", "i_collapsed", "o_collapsed", "is_exported"]
+allowed_out_metadata_keys = ["is_ai_res"]
